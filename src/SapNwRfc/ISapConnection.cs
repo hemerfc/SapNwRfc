@@ -55,5 +55,12 @@ namespace SapNwRfc
         /// <param name="name">The name of the remote function.</param>
         /// <returns>The <see cref="ISapFunction"/> object.</returns>
         ISapFunction CreateFunction(string name);
+
+        /// <summary>
+        /// Creates a <see cref="ISapFunction"/> object for invoking the remote function.
+        /// </summary>
+        /// <param name="name">The name of the remote function.</param>
+        /// <returns>The <see cref="ISapFunction"/> object.</returns>
+        ISapFunction CreateCachedFunction(string name);
     }
 }

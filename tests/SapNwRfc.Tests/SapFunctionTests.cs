@@ -28,6 +28,18 @@ namespace SapNwRfc.Tests
         }
 
         [Fact]
+        public void CreateFromDescriptionHandle_ShouldCreateCachedFunction()
+        {
+            // Act
+            ISapFunction function = SapFunction.CreateFromDescriptionHandle(_interopMock.Object, RfcConnectionHandle, FunctionDescriptionHandle);
+
+            // Assert
+            function.Should().NotBeNull();
+            RfcErrorInfo errorInfo;
+            _interopMock.Verify(x => x.CreateFunction(FunctionDescriptionHandle, out errorInfo), Times.Once);
+        }
+
+        [Fact]
         public void CreateFromDescriptionHandle_CreationFailed_ShouldThrowException()
         {
             // Arrange
