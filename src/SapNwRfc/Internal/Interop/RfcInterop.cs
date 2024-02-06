@@ -64,6 +64,12 @@ namespace SapNwRfc.Internal.Interop
             => RfcGetFunctionDesc(rfcHandle, funcName, out errorInfo);
 
         [DllImport(SapNwRfcDllName, CharSet = CharSet.Unicode)]
+        private static extern IntPtr RfcGetCachedFunctionDesc(string repositoryId, string funcName, out RfcErrorInfo errorInfo);
+
+        public virtual IntPtr GetCachedFunctionDesc(string repositoryId, string funcName, out RfcErrorInfo errorInfo)
+            => RfcGetCachedFunctionDesc(repositoryId, funcName, out errorInfo);
+
+        [DllImport(SapNwRfcDllName, CharSet = CharSet.Unicode)]
         private static extern IntPtr RfcDescribeFunction(IntPtr rfcHandle, out RfcErrorInfo errorInfo);
 
         public virtual IntPtr DescribeFunction(IntPtr rfcHandle, out RfcErrorInfo errorInfo)
@@ -133,6 +139,18 @@ namespace SapNwRfc.Internal.Interop
 
         public virtual RfcResultCode Invoke(IntPtr rfcHandle, IntPtr funcHandle, out RfcErrorInfo errorInfo)
             => RfcInvoke(rfcHandle, funcHandle, out errorInfo);
+
+        [DllImport(SapNwRfcDllName, CharSet = CharSet.Unicode)]
+        private static extern RfcResultCode RfcLoadRepository(string repositoryId, IntPtr targetStream, out RfcErrorInfo errorInfo);
+
+        public virtual RfcResultCode LoadRepository(string repositoryId, IntPtr targetStream, out RfcErrorInfo errorInfo)
+            => RfcLoadRepository(repositoryId, targetStream, out errorInfo);
+
+        [DllImport(SapNwRfcDllName, CharSet = CharSet.Unicode)]
+        private static extern RfcResultCode RfcSaveRepository(string repositoryId, IntPtr targetStream, out RfcErrorInfo errorInfo);
+
+        public virtual RfcResultCode SaveRepository(string repositoryId, IntPtr targetStream, out RfcErrorInfo errorInfo)
+            => RfcSaveRepository(repositoryId, targetStream, out errorInfo);
 
         #endregion
 

@@ -166,13 +166,22 @@ namespace SapNwRfc
             InstallGenericServerFunctionHandler(new RfcInterop(), parameters, action);
         }
 
+        #pragma warning disable SA1306 // Field names should begin with lower-case letter
+        private static RfcInterop.RfcServerFunction CurrentServerFunction;
+        private static RfcInterop.RfcFunctionDescriptionCallback CurrentFunctionDescriptionCallback;
+        #pragma warning restore SA1306 // Field names should begin with lower-case letter
+
         private static void InstallGenericServerFunctionHandler(RfcInterop interop, SapConnectionParameters parameters, Action<ISapServerConnection, ISapServerFunction> action)
         {
+            CurrentServerFunction = (IntPtr connectionHandle, IntPtr functionHandle, out RfcErrorInfo errorInfo)
+                => HandleGenericFunction(interop, action, connectionHandle, functionHandle, out errorInfo);
+
+            CurrentFunctionDescriptionCallback = (string functionName, RfcAttributes attributes, ref IntPtr funcDescHandle)
+                => HandleGenericMetadata(interop, parameters, functionName, out funcDescHandle);
+
             RfcResultCode resultCode = interop.InstallGenericServerFunction(
-                serverFunction: (IntPtr connectionHandle, IntPtr functionHandle, out RfcErrorInfo errorInfo)
-                                    => HandleGenericFunction(interop, action, connectionHandle, functionHandle, out errorInfo),
-                funcDescPointer: (string functionName, RfcAttributes attributes, ref IntPtr funcDescHandle)
-                                    => HandleGenericMetadata(interop, parameters, functionName, out funcDescHandle),
+                serverFunction: CurrentServerFunction,
+                funcDescPointer: CurrentFunctionDescriptionCallback,
                 out RfcErrorInfo installFunctionErrorInfo);
 
             resultCode.ThrowOnError(installFunctionErrorInfo);
