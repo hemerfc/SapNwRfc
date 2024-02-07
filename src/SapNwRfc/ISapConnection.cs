@@ -57,10 +57,11 @@ namespace SapNwRfc
         ISapFunction CreateFunction(string name);
 
         /// <summary>
-        /// Creates a <see cref="ISapFunction"/> object for invoking the remote function.
+        /// Creates a <see cref="ISapFunction"/> object for invoking the remote function. Using medata from a custom repository in cache.
         /// </summary>
         /// <param name="name">The name of the remote function.</param>
+        /// <param name="repositoryId">The id used in repository load.</param>
         /// <returns>The <see cref="ISapFunction"/> object.</returns>
-        ISapFunction CreateCachedFunction(string name);
+        // SapFunction CreateCachedFunction(string name, string repositoryId);
     }
 }

@@ -64,10 +64,10 @@ namespace SapNwRfc.Internal.Interop
             => RfcGetFunctionDesc(rfcHandle, funcName, out errorInfo);
 
         [DllImport(SapNwRfcDllName, CharSet = CharSet.Unicode)]
-        private static extern IntPtr RfcGetCachedFunctionDesc(IntPtr rfcHandle, string funcName, out RfcErrorInfo errorInfo);
+        private static extern IntPtr RfcGetCachedFunctionDesc(string repositoryId, string funcName, out RfcErrorInfo errorInfo);
 
-        public virtual IntPtr GetCachedFunctionDesc(IntPtr rfcHandle, string funcName, out RfcErrorInfo errorInfo)
-            => RfcGetCachedFunctionDesc(rfcHandle, funcName, out errorInfo);
+        public virtual IntPtr GetCachedFunctionDesc(string repositoryId, string funcName, out RfcErrorInfo errorInfo)
+            => RfcGetCachedFunctionDesc(repositoryId, funcName, out errorInfo);
 
         [DllImport(SapNwRfcDllName, CharSet = CharSet.Unicode)]
         private static extern IntPtr RfcDescribeFunction(IntPtr rfcHandle, out RfcErrorInfo errorInfo);
@@ -360,6 +360,15 @@ namespace SapNwRfc.Internal.Interop
 
         public virtual RfcResultCode InstallGenericServerFunction(RfcServerFunction serverFunction, RfcFunctionDescriptionCallback funcDescPointer, out RfcErrorInfo errorInfo)
             => RfcInstallGenericServerFunction(serverFunction, funcDescPointer, out errorInfo);
+
+        /*
+        DECL_EXP RFC_RC SAP_API RfcInstallServerFunction(SAP_UC const *sysId, RFC_FUNCTION_DESC_HANDLE funcDescHandle, RFC_SERVER_FUNCTION serverFunction, RFC_ERROR_INFO* errorInfo);
+         */
+        [DllImport(SapNwRfcDllName)]
+        private static extern RfcResultCode RfcInstallServerFunction(string sysId, IntPtr funcDescHandle, RfcServerFunction serverFunction, out RfcErrorInfo errorInfo);
+
+        public virtual RfcResultCode InstallServerFunction(string sysId, IntPtr funcDescHandle, RfcServerFunction serverFunction, out RfcErrorInfo errorInfo)
+            => RfcInstallServerFunction(sysId, funcDescHandle, serverFunction,  out errorInfo);
 
         [DllImport(SapNwRfcDllName)]
         private static extern IntPtr RfcCreateServer(RfcConnectionParameter[] connectionParams, uint paramCount, out RfcErrorInfo errorInfo);

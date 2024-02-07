@@ -150,69 +150,9 @@ namespace SapNwRfc
         }
 
         /// <inheritdoc cref="ISapConnection"/>
-        public bool LoadRepositoryFromFile(string filePath, string repositoryId)
-        {
-            // open repository file for read
-            IntPtr filePtr = LegacyFileManager.fopen(filePath, "r");
-            if (filePtr == IntPtr.Zero)
-            {
-                throw new IOException($"Failed to open repository file '{filePath}'.");
-            }
-
-            RfcResultCode resultCode = _interop.LoadRepository(
-                repositoryId: repositoryId,
-                targetStream: filePtr,
-                errorInfo: out RfcErrorInfo errorInfo);
-
-            LegacyFileManager.fclose(filePtr);
-
-            errorInfo.ThrowOnError();
-
-            return resultCode == RfcResultCode.RFC_OK;
-        }
-
-        /// <inheritdoc cref="ISapConnection"/>
-        public bool SaveRepositoryFromFile(string filePath, string repositoryId)
-        {
-            // open repository file for read
-            IntPtr filePtr = LegacyFileManager.fopen(filePath, "w");
-            if (filePtr == IntPtr.Zero)
-            {
-                throw new IOException($"Failed to open repository file '{filePath}'.");
-            }
-
-            RfcResultCode resultCode = _interop.SaveRepository(
-                repositoryId: repositoryId,
-                targetStream: filePtr,
-                errorInfo: out RfcErrorInfo errorInfo);
-
-            LegacyFileManager.fclose(filePtr);
-
-            errorInfo.ThrowOnError();
-
-            return resultCode == RfcResultCode.RFC_OK;
-        }
-
-        /// <inheritdoc cref="ISapConnection"/>
         public ISapFunction CreateFunction(string name)
         {
             IntPtr functionDescriptionHandle = _interop.GetFunctionDesc(
-                rfcHandle: _rfcConnectionHandle,
-                funcName: name,
-                errorInfo: out RfcErrorInfo errorInfo);
-
-            errorInfo.ThrowOnError();
-
-            return SapFunction.CreateFromDescriptionHandle(
-                interop: _interop,
-                rfcConnectionHandle: _rfcConnectionHandle,
-                functionDescriptionHandle: functionDescriptionHandle);
-        }
-
-        /// <inheritdoc cref="ISapConnection"/>
-        public ISapFunction CreateCachedFunction(string name)
-        {
-            IntPtr functionDescriptionHandle = _interop.GetCachedFunctionDesc(
                 rfcHandle: _rfcConnectionHandle,
                 funcName: name,
                 errorInfo: out RfcErrorInfo errorInfo);

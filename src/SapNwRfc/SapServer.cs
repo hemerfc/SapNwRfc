@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using SapNwRfc.Internal;
 using SapNwRfc.Internal.Interop;
 
 namespace SapNwRfc
@@ -153,30 +155,137 @@ namespace SapNwRfc
         /// <param name="action">The RFC server function handler.</param>
         public static void InstallGenericServerFunctionHandler(string connectionString, Action<ISapServerConnection, ISapServerFunction> action)
         {
-            InstallGenericServerFunctionHandler(SapConnectionParameters.Parse(connectionString), action);
+            InstallGenericServerFunctionHandler(new RfcInterop(), SapConnectionParameters.Parse(connectionString), action);
         }
 
         /// <summary>
         /// Installs a global server function handler.
         /// </summary>
-        /// <param name="parameters">The connection parameters.</param>
+        /// <param name="connectionString">The connection string.</param>
         /// <param name="action">The RFC server function handler.</param>
-        public static void InstallGenericServerFunctionHandler(SapConnectionParameters parameters, Action<ISapServerConnection, ISapServerFunction> action)
+        /// <param name="repositoryFilePath">The repository file name.</param>
+        /// <param name="repoName">The repository name.</param>
+        public static void InstallGenericServerFunctionHandler(
+            string connectionString,
+            Action<ISapServerConnection, ISapServerFunction> action, string repositoryFilePath, string repoName)
         {
-            InstallGenericServerFunctionHandler(new RfcInterop(), parameters, action);
+            InstallGenericServerFunctionHandler(new RfcInterop(), SapConnectionParameters.Parse(connectionString), action, repositoryFilePath, repoName);
         }
+
+        #pragma warning disable SA1306 // Field names should begin with lower-case letter
+        private static RfcInterop.RfcServerFunction CurrentServerFunction;
+        private static RfcInterop.RfcFunctionDescriptionCallback CurrentFunctionDescriptionCallback;
+        private static RfcInterop.RfcFunctionDescriptionCallback CurrentFunctionDescriptionFromCacheCallback;
+        #pragma warning restore SA1306 // Field names should begin with lower-case letter
 
         private static void InstallGenericServerFunctionHandler(RfcInterop interop, SapConnectionParameters parameters, Action<ISapServerConnection, ISapServerFunction> action)
         {
+            CurrentServerFunction = (IntPtr connectionHandle, IntPtr functionHandle, out RfcErrorInfo errorInfo)
+                => HandleGenericFunction(interop, action, connectionHandle, functionHandle, out errorInfo);
+
+            CurrentFunctionDescriptionCallback = (string functionName, RfcAttributes attributes, ref IntPtr funcDescHandle)
+                => HandleGenericMetadata(interop, parameters, functionName, out funcDescHandle);
+
             RfcResultCode resultCode = interop.InstallGenericServerFunction(
-                serverFunction: (IntPtr connectionHandle, IntPtr functionHandle, out RfcErrorInfo errorInfo)
-                                    => HandleGenericFunction(interop, action, connectionHandle, functionHandle, out errorInfo),
-                funcDescPointer: (string functionName, RfcAttributes attributes, ref IntPtr funcDescHandle)
-                                    => HandleGenericMetadata(interop, parameters, functionName, out funcDescHandle),
+                serverFunction: CurrentServerFunction,
+                funcDescPointer: CurrentFunctionDescriptionCallback,
                 out RfcErrorInfo installFunctionErrorInfo);
 
             resultCode.ThrowOnError(installFunctionErrorInfo);
         }
+
+        private static void InstallGenericServerFunctionHandler(RfcInterop interop, SapConnectionParameters parameters,
+            Action<ISapServerConnection, ISapServerFunction> action, string repositoryFileName, string repoName)
+        {
+            CurrentServerFunction = (IntPtr connectionHandle, IntPtr functionHandle, out RfcErrorInfo errorInfo)
+                => HandleGenericFunction(interop, action, connectionHandle, functionHandle, out errorInfo);
+
+            CurrentFunctionDescriptionFromCacheCallback =
+                (string functionName2, RfcAttributes attributes, ref IntPtr funcDescHandle) =>
+                {
+                    LoadRepositoryFromFile(interop, repositoryFileName, repoName);
+
+                    funcDescHandle = interop.GetCachedFunctionDesc(
+                        repositoryId: repoName,
+                        funcName: functionName2,
+                        errorInfo: out RfcErrorInfo errorInfo2);
+
+                    errorInfo2.ThrowOnError();
+
+                    return RfcResultCode.RFC_OK;
+                };
+
+            /* CurrentFunctionDescriptionCallback = (string functionName_, RfcAttributes attributes, ref IntPtr funcDescHandle)
+              => HandleGenericMetadata(interop, parameters, functionName_, out funcDescHandle); */
+
+            RfcResultCode resultCode = interop.InstallGenericServerFunction(
+                serverFunction: CurrentServerFunction,
+                funcDescPointer: CurrentFunctionDescriptionFromCacheCallback,
+                out RfcErrorInfo installFunctionErrorInfo);
+
+            resultCode.ThrowOnError(installFunctionErrorInfo);
+        }
+
+        /// <inheritdoc cref="ISapConnection"/>
+        private static bool LoadRepositoryFromFile(RfcInterop interop, string filePath, string repositoryId)
+        {
+            // open repository file for read
+            IntPtr filePtr = LegacyFileManager.fopen(filePath, "r");
+            if (filePtr == IntPtr.Zero)
+            {
+                throw new IOException($"Failed to open repository file '{filePath}'.");
+            }
+
+            RfcResultCode resultCode = interop.LoadRepository(
+                repositoryId: repositoryId,
+                targetStream: filePtr,
+                errorInfo: out RfcErrorInfo errorInfo);
+
+            LegacyFileManager.fclose(filePtr);
+
+            errorInfo.ThrowOnError();
+
+            return resultCode == RfcResultCode.RFC_OK;
+        }
+
+        /// <inheritdoc cref="ISapConnection"/>
+        private static bool SaveRepositoryFromFile(RfcInterop interop, string filePath, string repositoryId)
+        {
+            // open repository file for read
+            IntPtr filePtr = LegacyFileManager.fopen(filePath, "w");
+            if (filePtr == IntPtr.Zero)
+            {
+                throw new IOException($"Failed to open repository file '{filePath}'.");
+            }
+
+            RfcResultCode resultCode = interop.SaveRepository(
+                repositoryId: repositoryId,
+                targetStream: filePtr,
+                errorInfo: out RfcErrorInfo errorInfo);
+
+            LegacyFileManager.fclose(filePtr);
+
+            errorInfo.ThrowOnError();
+
+            return resultCode == RfcResultCode.RFC_OK;
+        }
+
+        /*
+        private static ISapFunction CreateCachedFunction(RfcInterop interop, string name, string repositoryId)
+        {
+            IntPtr functionDescriptionHandle = interop.GetCachedFunctionDesc(
+                repositoryId: repositoryId,
+                funcName: name,
+                errorInfo: out RfcErrorInfo errorInfo);
+
+            errorInfo.ThrowOnError();
+
+            return SapFunction.CreateFromDescriptionHandle(
+                interop: _interop,
+                rfcConnectionHandle: _rfcConnectionHandle,
+                functionDescriptionHandle: functionDescriptionHandle);
+        }
+        */
 
         private static RfcResultCode HandleGenericFunction(RfcInterop interop, Action<ISapServerConnection, ISapServerFunction> action, IntPtr connectionHandle, IntPtr functionHandle, out RfcErrorInfo errorInfo)
         {

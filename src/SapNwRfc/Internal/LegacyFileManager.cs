@@ -1,25 +1,18 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
+// ReSharper disable All
 namespace SapNwRfc.Internal
 {
+    [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:Element should begin with upper-case letter", Justification = "aa")]
+    [SuppressMessage("StyleCop.CSharp.ReadabilityRules", "SA1121:Use built-in type alias", Justification = "aa")]
     public static class LegacyFileManager
     {
-        #if RUNTIME_OSX
-            private const string CLib = "libc.so";
-        #elif RUNTIME_LINUX
-            private const string CLib = "libc.so";
-        #else // RUNTIME_WINDOWS
-            private const string CLib = "msvcrt.dll";
-        #endif
+        [DllImport("msvcr120.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        public static extern IntPtr fopen(String filename, String mode);
 
-#pragma warning disable SA1300
-            [DllImport(CLib, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-            public static extern IntPtr fopen(string filename, string mode);
-
-            [DllImport(CLib, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-
-            public static extern int fclose(IntPtr file);
-#pragma warning restore SA1300
+        [DllImport("msvcr120.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        public static extern Int32 fclose(IntPtr file);
     }
 }
